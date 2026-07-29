@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+binding="${1:?pass pundit or action_policy}"
+
+if output=$(BINDING="$binding" bundle exec rake demo 2>&1); then
+  echo "Demo unexpectedly passed"
+  exit 1
+fi
+
+echo "$output"
+grep -q 'DATA EXPOSURE.*recruiter / confidential_app' <<<"$output"
+test "$(grep -c 'DATA EXPOSURE' <<<"$output")" -eq 1

@@ -22,7 +22,10 @@ module Enforceable
 
     # Renders the report, optionally as JSON for CI.
     def to_s(format: :text, color: $stdout.tty?)
-      format.to_sym == :json ? JSON.generate(to_h) : text(color: color)
+      return JSON.generate(to_h) if format.to_sym == :json
+      return clean_summary if clean?
+
+      text(color: color)
     end
 
     # Returns a machine-readable representation.
@@ -44,7 +47,9 @@ module Enforceable
     end
 
     def render_group(policy, rule, entries, color:)
-      lines = ["Enforceable::Divergence — #{policy.name}##{rule}", '',
+      divergent = entries.reject(&:match?)
+      header = divergent.empty? ? "Enforceable — #{policy.name}##{rule}" : "Enforceable::Divergence — #{policy.name}##{rule}"
+      lines = [header, '',
                '  actor          subject             rule   scope', '  ─────────────────────────────────────────────────']
       entries.each do |finding|
         rule_result = if finding.error?
@@ -61,12 +66,13 @@ module Enforceable
         row = format('  %-14s %-19s %-6s %-6s%s', finding.actor_name, finding.subject_name, rule_result, scope_result, marker)
         lines << colorize(row, finding, color)
       end
-      divergent = entries.reject(&:match?)
-      return append_query_warning(lines, entries).join("\n") if divergent.empty?
+      warning = query_warning_line(entries)
+      return (lines << warning).join("\n") if divergent.empty? && warning
+      return lines.join("\n") if divergent.empty?
 
       lines << ''
       divergent.each { |finding| lines << explanation(finding) }
-      append_query_warning(lines, entries)
+      lines << warning if warning
       lines << ''
       lines << "  Fix the scope, fix the rule, or declare: not_enforceable :#{rule}, reason: \"...\""
       lines.join("\n")
@@ -86,15 +92,23 @@ module Enforceable
       "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{finding.record_id}) — #{details}"
     end
 
-    def append_query_warning(lines, entries)
-      return lines unless @query_warning_threshold
+    def clean?
+      findings.all?(&:match?) && query_warning_line(findings).nil?
+    end
+
+    def clean_summary
+      policy_count = findings.map(&:policy_class).uniq.size
+      "Enforceable: #{findings.size} pairs across #{policy_count} policies — no divergences."
+    end
+
+    def query_warning_line(entries)
+      return unless @query_warning_threshold
 
       slow = entries.select { |finding| finding.queries.to_i >= @query_warning_threshold }
-      return lines if slow.empty?
+      return if slow.empty?
 
       details = slow.map { |finding| "#{finding.actor_name}/#{finding.subject_name}=#{finding.queries} SQL" }.join(', ')
-      lines << "\n  N+1 RISK (threshold: #{@query_warning_threshold} SQL/check): #{details}"
-      lines
+      "\n  N+1 RISK (threshold: #{@query_warning_threshold} SQL/check): #{details}"
     end
 
     def colorize(text, finding, color)

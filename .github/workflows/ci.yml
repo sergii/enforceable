@@ -19,22 +19,6 @@ jobs:
       - run: bundle exec rspec
       - run: bundle exec rubocop
       - name: Demo detects the seeded leak (Pundit)
-        run: |
-          if output=$(bundle exec rake demo 2>&1); then
-            echo "Demo unexpectedly passed"
-            exit 1
-          fi
-          echo "$output"
-          grep -q "DATA EXPOSURE" <<<"$output"
-          grep -q "recruiter" <<<"$output"
-          grep -q "confidential_app" <<<"$output"
+        run: bash bin/ci/verify_demo pundit
       - name: Demo detects the seeded leak (Action Policy)
-        run: |
-          if output=$(BINDING=action_policy bundle exec rake demo 2>&1); then
-            echo "Demo unexpectedly passed"
-            exit 1
-          fi
-          echo "$output"
-          grep -q "DATA EXPOSURE" <<<"$output"
-          grep -q "recruiter" <<<"$output"
-          grep -q "confidential_app" <<<"$output"
+        run: bash bin/ci/verify_demo action_policy

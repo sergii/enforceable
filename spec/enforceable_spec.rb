@@ -91,6 +91,22 @@ RSpec.describe Enforceable do
     expect(report.to_s).to include('N+1 RISK', 'threshold: 3 SQL/check')
   end
 
+  it 'summarizes a clean report instead of rendering a divergence matrix' do
+    finding = Enforceable::Runner::Finding.new(
+      policy_class: WidgetPolicy,
+      rule: :show?,
+      scope: :visible,
+      actor_name: :reader,
+      subject_name: :widget,
+      record: Widget.new(id: 1),
+      record_id: 1,
+      allowed: true,
+      included: true,
+      queries: 0
+    )
+    expect(Enforceable::Report.new([finding]).to_s).to eq('Enforceable: 1 pairs across 1 policies — no divergences.')
+  end
+
   it 'records policy exceptions instead of crashing' do
     binding = Enforceable::Binding.custom(
       rules: ->(_) { [:show?] },
