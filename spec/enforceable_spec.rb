@@ -44,6 +44,34 @@ end
 RSpec.describe Enforceable do
   before { Widget.delete_all }
 
+  it 'fails rather than succeeding when no policies are selected' do
+    runner = Enforceable::Runner.new(
+      binding: Enforceable::Binding::Pundit.new,
+      world: Enforceable::World.new(:empty),
+      policies: []
+    )
+    expect { runner.run }.to raise_error(Enforceable::Runner::EmptyPolicySet, /no policies to verify/)
+  end
+
+  it 'fails when a selected policy has no declarations' do
+    policy = Class.new { include Enforceable }
+    runner = Enforceable::Runner.new(
+      binding: Enforceable::Binding::Pundit.new,
+      world: Enforceable::World.new(:empty),
+      policies: [policy]
+    )
+    expect { runner.run }.to raise_error(Enforceable::Runner::EmptyPolicyDeclarationSet, /has no enforceable/)
+  end
+
+  it 'rejects duplicate and contradictory declarations in one policy' do
+    policy = Class.new { include Enforceable }
+    policy.enforceable :show?, scope_name: :default
+    aggregate_failures 'duplicate declarations' do
+      expect { policy.enforceable :show?, scope_name: :default }.to raise_error(Enforceable::DuplicateDeclarationError)
+      expect { policy.not_enforceable :show?, reason: 'contradictory' }.to raise_error(Enforceable::DuplicateDeclarationError)
+    end
+  end
+
   it 'reports a scope leak and acknowledged exclusions' do
     world = Enforceable::World.define(:widgets) do
       actor(:member) { { admin: false } }

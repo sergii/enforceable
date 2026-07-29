@@ -6,6 +6,12 @@ require_relative 'report'
 module Enforceable
   # Executes policy declarations against every actor and subject in a world.
   class Runner
+    class EmptyPolicySet < StandardError
+    end
+
+    class EmptyPolicyDeclarationSet < StandardError
+    end
+
     class ScopeTypeError < StandardError
     end
     Finding = Struct.new(:policy_class, :rule, :scope_name, :actor_name, :subject_name, :actor, :record, :record_id,
@@ -34,11 +40,14 @@ module Enforceable
     # Runs all registered policies and returns a report.
     def run
       ensure_active_record!
+      raise EmptyPolicySet, 'no policies to verify — eager load policies or pass policies: explicitly' if policies.empty?
+
       findings = []
       acknowledgements = []
       in_transaction do
         actors, subjects = world.materialize
         policies.each do |policy|
+          ensure_policy_has_declarations!(policy)
           policy.enforceable_acknowledgements.each { |entry| acknowledgements << [policy, entry] }
           declared_rules = binding.rules_for(policy).map(&:to_sym)
           policy.enforceable_declarations.select { |declaration| declared_rules.include?(declaration.rule) }.each do |declaration|
@@ -77,6 +86,12 @@ module Enforceable
       return if defined?(::ActiveRecord::Base)
 
       raise LoadError, 'Enforceable::Runner requires ActiveRecord and is test-only'
+    end
+
+    def ensure_policy_has_declarations!(policy)
+      return unless policy.enforceable_declarations.empty? && policy.enforceable_acknowledgements.empty?
+
+      raise EmptyPolicyDeclarationSet, "#{policy.name || policy} has no enforceable or not_enforceable declarations"
     end
 
     def in_transaction(&)
