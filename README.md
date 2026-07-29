@@ -2,7 +2,7 @@
 
 Authorization bugs often hide in the gap between a policy’s point check and its collection scope. `enforceable` runs both for every actor/record fixture pair and reports disagreement—especially the dangerous case where a scope includes a record that the rule denies.
 
-```
+```ruby
 Enforceable::Divergence — ApplicationPolicy#show?
   recruiter      confidential_app    ✗      ✓   ←
   DATA EXPOSURE — scope broader than rule: recruiter / confidential_app
