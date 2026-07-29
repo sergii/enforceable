@@ -7,9 +7,9 @@ module Enforceable
 
     class << self
       # Defines and registers a named fixture world.
-      def define(name, &block)
+      def define(name, &)
         world = new(name)
-        world.instance_eval(&block)
+        world.instance_eval(&)
         worlds[name.to_sym] = world
       end
 
@@ -18,6 +18,9 @@ module Enforceable
 
       # Holds registered worlds.
       def worlds = (@worlds ||= {})
+
+      # Clears named worlds, primarily for isolated test suites.
+      def reset! = @worlds = {}
     end
 
     attr_reader :name, :actors, :subjects

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'enforceable'
+Enforceable.runner!
 
 module Enforceable
   # RSpec helpers for one readable example per registered policy.

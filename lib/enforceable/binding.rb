@@ -19,15 +19,20 @@ module Enforceable
 
     # Lambda-backed adapter for PORO policies.
     class Custom < Binding
-      def initialize(rules, check, scope) = (@rules = rules
-                                             @check = check
-                                             @scope = scope)
+      def initialize(rules, check, scope)
+        super()
+        @rules = rules
+        @check = check
+        @scope = scope
+      end
 
       def rules_for(policy_class) = @rules.call(policy_class)
       def check(actor, rule, record, policy_class: nil) = @check.call(actor, rule, record, policy_class: policy_class)
 
       def scope(actor, rule, relation, policy_class: nil, scope_name: nil,
-                **opts) = @scope.call(actor, rule, relation, policy_class: policy_class, scope_name: scope_name, **opts)
+                **)
+        @scope.call(actor, rule, relation, policy_class: policy_class, scope_name: scope_name, **)
+      end
     end
 
     # Conventional Pundit adapter.
@@ -35,17 +40,28 @@ module Enforceable
       def rules_for(policy_class) = policy_class.enforceable_declarations.map(&:rule)
       def check(actor, rule, record, policy_class: nil) = policy_class.new(actor, record).public_send(rule)
 
-      def scope(actor, _rule, relation, policy_class: nil, scope_name: nil,
-                **_opts) = policy_class.const_get(:Scope).new(actor, relation).resolve
+      def scope(actor, _rule, relation, policy_class: nil, **_opts)
+        policy_class.const_get(:Scope).new(actor, relation).resolve
+      end
     end
 
     # Adapter for Action Policy style actor methods.
     class ActionPolicy < Binding
       def rules_for(policy_class) = policy_class.enforceable_declarations.map(&:rule)
-      def check(actor, rule, record, **_opts) = actor.allowed_to?(rule, record)
+
+      def check(actor, rule, record, policy_class: nil)
+        policy_class.new(record, user: actor).apply(rule)
+      end
 
       def scope(actor, _rule, relation, policy_class: nil, scope_name: nil,
-                **opts) = actor.authorized_scope(relation, type: scope_name, **opts)
+                **opts)
+        policy_class.new(nil, user: actor).apply_scope(
+          relation,
+          type: :active_record_relation,
+          name: scope_name || :default,
+          scope_options: opts.empty? ? nil : opts
+        )
+      end
     end
   end
 end

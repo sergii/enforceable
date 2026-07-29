@@ -4,6 +4,11 @@ require 'active_record'
 require 'enforceable'
 Enforceable.runner!
 
+if ENV.fetch('BINDING', 'pundit') == 'action_policy'
+  require 'action_policy'
+  require 'action_policy/rails/scope_matchers/active_record'
+end
+
 ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: ':memory:')
 ActiveRecord::Schema.define do
   create_table(:workspaces) { |t| t.string :name }
@@ -33,15 +38,24 @@ class User < ActiveRecord::Base
   belongs_to :workspace
 
   def on_hiring_committee?(_requisition) = hiring_committee?
+end
 
-  def allowed_to?(rule, record)
-    ApplicationPolicy.new(self, record).public_send(rule)
-  end
+if defined?(ActionPolicy)
+  class ActionApplicationPolicy < ActionPolicy::Base
+    include Enforceable
 
-  def authorized_scope(relation, type:)
-    raise ArgumentError, "unknown scope #{type}" unless type == :relation_scope
+    enforceable :show?, scope: :default
 
-    ApplicationPolicy::Scope.new(self, relation).resolve
+    def show?
+      return false if record.requisition.confidential? && !user.on_hiring_committee?(record.requisition)
+
+      user.workspace_id == record.workspace_id
+    end
+
+    # Deliberate bug: this must also exclude confidential requisitions.
+    relation_scope do |relation|
+      relation.where(workspace_id: user.workspace_id)
+    end
   end
 end
 
@@ -59,10 +73,13 @@ end
 
 class ApplicationPolicy
   include Enforceable
+
   enforceable :show?, scope: :relation_scope
 
-  def initialize(user, record) = (@user = user
-                                  @record = record)
+  def initialize(user, record)
+    (@user = user
+     @record = record)
+  end
 
   def show?
     return false if @record.requisition.confidential? && !@user.on_hiring_committee?(@record.requisition)
@@ -71,8 +88,10 @@ class ApplicationPolicy
   end
 
   class Scope
-    def initialize(user, relation) = (@user = user
-                                      @relation = relation)
+    def initialize(user, relation)
+      (@user = user
+       @relation = relation)
+    end
 
     # Deliberate bug: this must also exclude confidential requisitions.
     def resolve = @relation.where(workspace_id: @user.workspace_id)
@@ -97,7 +116,9 @@ Enforceable::World.define(:ats) do
   end
 end
 
-binding = ENV.fetch('BINDING', 'pundit') == 'action_policy' ? Enforceable::Binding::ActionPolicy.new : Enforceable::Binding::Pundit.new
-report = Enforceable::Runner.new(binding: binding, world: :ats).run
+action_policy = ENV.fetch('BINDING', 'pundit') == 'action_policy'
+binding = action_policy ? Enforceable::Binding::ActionPolicy.new : Enforceable::Binding::Pundit.new
+policies = action_policy ? [ActionApplicationPolicy] : [ApplicationPolicy]
+report = Enforceable::Runner.new(binding: binding, world: :ats, policies: policies).run
 puts report.to_s(format: ENV.fetch('FORMAT', 'text'))
 abort 'Demo intentionally fails: the scope leaks confidential applications' if report.failed?

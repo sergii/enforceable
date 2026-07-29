@@ -20,65 +20,76 @@ module Enforceable
     end
 
     # Renders the report, optionally as JSON for CI.
-    def to_s(format: :text)
-      format.to_sym == :json ? JSON.generate(to_h) : text
+    def to_s(format: :text, color: $stdout.tty?)
+      format.to_sym == :json ? JSON.generate(to_h) : text(color: color)
     end
 
     # Returns a machine-readable representation.
     def to_h
-      { failed: failed?, findings: findings.map do |f|
-        finding_hash(f)
-      end, acknowledged: acknowledgements.map do |policy, entry|
-             { policy: policy.name, rule: entry.rule, reason: entry.reason }
-           end }
+      {
+        failed: failed?,
+        findings: findings.map { |finding| finding_hash(finding) },
+        acknowledged: acknowledgements.map do |policy, entry|
+          { policy: policy.name, rule: entry.rule, reason: entry.reason }
+        end
+      }
     end
 
     private
 
-    def text
-      grouped = findings.group_by { |f| [f.policy_class, f.rule] }
-      grouped.map { |(policy, rule), entries| render_group(policy, rule, entries) }.join("\n\n") + acknowledgements_text
+    def text(color:)
+      grouped = findings.group_by { |finding| [finding.policy_class, finding.rule] }
+      grouped.map { |(policy, rule), entries| render_group(policy, rule, entries, color: color) }.join("\n\n") + acknowledgements_text
     end
 
-    def render_group(policy, rule, entries)
+    def render_group(policy, rule, entries, color:)
       lines = ["Enforceable::Divergence — #{policy.name}##{rule}", '',
                '  actor          subject             rule   scope', '  ─────────────────────────────────────────────────']
-      entries.each do |f|
-        rule_result = if f.error?
+      entries.each do |finding|
+        rule_result = if finding.error?
                         'ERROR'
                       else
-                        (f.allowed ? '✓' : '✗')
+                        (finding.allowed ? '✓' : '✗')
                       end
-        scope_result = if f.error?
+        scope_result = if finding.error?
                          'ERROR'
                        else
-                         (f.included ? '✓' : '✗')
+                         (finding.included ? '✓' : '✗')
                        end
-        marker = f.match? ? '' : '   ←'
-        lines << format('  %-14s %-19s %-6s %-6s%s', f.actor_name, f.subject_name, rule_result, scope_result, marker)
+        marker = finding.match? ? '' : '   ←'
+        row = format('  %-14s %-19s %-6s %-6s%s', finding.actor_name, finding.subject_name, rule_result, scope_result, marker)
+        lines << colorize(row, finding, color)
       end
       divergent = entries.reject(&:match?)
       return lines.join("\n") if divergent.empty?
 
       lines << ''
-      divergent.each { |f| lines << explanation(f) }
+      divergent.each { |finding| lines << explanation(finding) }
+      slow = entries.select { |finding| finding.queries.to_i > 2 }
+      lines << "  N+1 RISK: #{slow.map { |finding| "#{finding.actor_name}/#{finding.subject_name}=#{finding.queries} SQL" }.join(', ')}" unless slow.empty?
       lines << ''
       lines << "  Fix the scope, fix the rule, or declare: not_enforceable :#{rule}, reason: \"...\""
       lines.join("\n")
     end
 
-    def explanation(f)
-      label = if f.leak?
+    def explanation(finding)
+      label = if finding.leak?
                 'DATA EXPOSURE — scope broader than rule'
               else
-                f.narrow? ? 'WARNING — rule broader than scope' : "ERROR — #{f.error.class}: #{f.error.message}"
+                finding.narrow? ? 'WARNING — rule broader than scope' : "ERROR — #{finding.error.class}: #{finding.error.message}"
               end
-      details = if f.error?
+      details = if finding.error?
                   'policy or scope raised'
                 else
-                  "rule #{f.allowed ? 'allowed' : 'denied'}; scope #{f.included ? 'included' : 'excluded'}"
+                  "rule #{finding.allowed ? 'allowed' : 'denied'}; scope #{finding.included ? 'included' : 'excluded'}"
                 end
-      "  #{label}: #{f.actor_name} / #{f.subject_name} (#{f.record.class}##{f.record_id}) — #{details}"
+      "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{finding.record_id}) — #{details}"
+    end
+
+    def colorize(text, finding, color)
+      return text unless color && !finding.match?
+
+      "\e[#{finding.leak? || finding.error? ? 31 : 33}m#{text}\e[0m"
     end
 
     def acknowledgements_text
@@ -89,15 +100,15 @@ module Enforceable
       }.join("\n")
     end
 
-    def finding_hash(f)
-      { policy: f.policy_class.name, rule: f.rule, scope: f.scope, actor: f.actor_name, subject: f.subject_name,
-        rule_allowed: f.allowed, scope_included: f.included, direction: if f.leak?
-                                                                          'leak'
-                                                                        elsif f.narrow?
-                                                                          'narrow_scope'
-                                                                        else
-                                                                          f.error? ? 'error' : 'match'
-                                                                        end, error: f.error&.message, queries: f.queries }
+    def finding_hash(finding)
+      { policy: finding.policy_class.name, rule: finding.rule, scope: finding.scope, actor: finding.actor_name, subject: finding.subject_name,
+        rule_allowed: finding.allowed, scope_included: finding.included, direction: if finding.leak?
+                                                                                      'leak'
+                                                                                    elsif finding.narrow?
+                                                                                      'narrow_scope'
+                                                                                    else
+                                                                                      finding.error? ? 'error' : 'match'
+                                                                                    end, error: finding.error&.message, queries: finding.queries }
     end
   end
 end

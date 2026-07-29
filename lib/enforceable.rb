@@ -17,6 +17,12 @@ module Enforceable
     @policies ||= []
   end
 
+  # Clears global registrations, primarily for isolated test suites.
+  def self.reset!
+    @policies = []
+    World.reset!
+  end
+
   # Loads the test runner only when it is explicitly needed.
   def self.runner!
     require_relative 'enforceable/runner'

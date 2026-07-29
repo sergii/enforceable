@@ -6,6 +6,8 @@ require_relative 'report'
 module Enforceable
   # Executes policy declarations against every actor and subject in a world.
   class Runner
+    class ScopeTypeError < StandardError
+    end
     Finding = Struct.new(:policy_class, :rule, :scope, :actor_name, :subject_name, :actor, :record, :record_id,
                          :allowed, :included, :error, :queries, keyword_init: true) do
       # True when a denied record is included by the scope.
@@ -58,6 +60,8 @@ module Enforceable
         allowed = binding.check(actor, declaration.rule, record, policy_class: policy)
         scoped = binding.scope(actor, declaration.rule, record.class.all, policy_class: policy,
                                                                           scope_name: declaration.scope, **declaration.scope_options)
+        raise ScopeTypeError, "scope returned #{scoped.class}, expected ActiveRecord::Relation" unless scoped.is_a?(::ActiveRecord::Relation)
+
         included = scoped.where(id: record.id).exists?
         return Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope,
                            actor_name: actor_name, subject_name: subject_name, actor: actor, record: record, record_id: record.id, allowed: !!allowed, included: included, queries: query_count)
@@ -73,8 +77,8 @@ module Enforceable
       raise LoadError, 'Enforceable::Runner requires ActiveRecord and is test-only'
     end
 
-    def in_transaction(&block)
-      ::ActiveRecord::Base.transaction(requires_new: true, &block)
+    def in_transaction(&)
+      ::ActiveRecord::Base.transaction(requires_new: true, &)
     end
 
     def query_count = @query_count || 0

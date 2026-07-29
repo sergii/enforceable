@@ -20,4 +20,4 @@ Add `gem "enforceable", group: :test` and require `enforceable/runner` only in t
 
 `not_enforceable :export?, reason: "session-only MFA state"` records a deliberate exclusion in the report.
 
-Run the demo with either adapter: `rake demo` (Pundit) or `BINDING=action_policy rake demo`.
+Run the demo with either adapter: `rake demo` (Pundit) or `BINDING=action_policy rake demo` (Action Policy). Both use the real framework APIs.
