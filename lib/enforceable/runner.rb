@@ -20,14 +20,15 @@ module Enforceable
       def match? = error.nil? && allowed == included
     end
 
-    attr_reader :binding, :world, :warn_on_narrow_scope, :policies
+    attr_reader :binding, :world, :warn_on_narrow_scope, :policies, :query_warning_threshold
 
     # Sets up a verification run using a binding and named or concrete world.
-    def initialize(binding:, world:, warn_on_narrow_scope: true, policies: Enforceable.policies)
+    def initialize(binding:, world:, warn_on_narrow_scope: true, policies: Enforceable.policies, query_warning_threshold: 3)
       @binding = binding
       @world = world.is_a?(World) ? world : World.fetch(world)
       @warn_on_narrow_scope = warn_on_narrow_scope
       @policies = policies
+      @query_warning_threshold = query_warning_threshold
     end
 
     # Runs all registered policies and returns a report.
@@ -50,7 +51,8 @@ module Enforceable
         end
         raise ::ActiveRecord::Rollback
       end
-      Report.new(findings, acknowledgements, warn_on_narrow_scope: warn_on_narrow_scope)
+      Report.new(findings, acknowledgements, warn_on_narrow_scope: warn_on_narrow_scope,
+                                             query_warning_threshold: query_warning_threshold)
     end
 
     private

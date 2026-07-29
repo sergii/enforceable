@@ -8,10 +8,11 @@ module Enforceable
     attr_reader :findings, :acknowledgements
 
     # Creates a report from runner output.
-    def initialize(findings, acknowledgements = [], warn_on_narrow_scope: true)
+    def initialize(findings, acknowledgements = [], warn_on_narrow_scope: true, query_warning_threshold: 3)
       @findings = findings
       @acknowledgements = acknowledgements
       @warn_on_narrow_scope = warn_on_narrow_scope
+      @query_warning_threshold = query_warning_threshold
     end
 
     # Returns true for errors, leaks, and configured narrow scopes.
@@ -61,12 +62,11 @@ module Enforceable
         lines << colorize(row, finding, color)
       end
       divergent = entries.reject(&:match?)
+      append_query_warning(lines, entries)
       return lines.join("\n") if divergent.empty?
 
       lines << ''
       divergent.each { |finding| lines << explanation(finding) }
-      slow = entries.select { |finding| finding.queries.to_i > 2 }
-      lines << "  N+1 RISK: #{slow.map { |finding| "#{finding.actor_name}/#{finding.subject_name}=#{finding.queries} SQL" }.join(', ')}" unless slow.empty?
       lines << ''
       lines << "  Fix the scope, fix the rule, or declare: not_enforceable :#{rule}, reason: \"...\""
       lines.join("\n")
@@ -84,6 +84,16 @@ module Enforceable
                   "rule #{finding.allowed ? 'allowed' : 'denied'}; scope #{finding.included ? 'included' : 'excluded'}"
                 end
       "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{finding.record_id}) — #{details}"
+    end
+
+    def append_query_warning(lines, entries)
+      return unless @query_warning_threshold
+
+      slow = entries.select { |finding| finding.queries.to_i >= @query_warning_threshold }
+      return if slow.empty?
+
+      details = slow.map { |finding| "#{finding.actor_name}/#{finding.subject_name}=#{finding.queries} SQL" }.join(', ')
+      lines << "\n  N+1 RISK (threshold: #{@query_warning_threshold} SQL/check): #{details}"
     end
 
     def colorize(text, finding, color)

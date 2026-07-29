@@ -74,6 +74,23 @@ RSpec.describe Enforceable do
     expect(report.to_s).to include('WARNING')
   end
 
+  it 'reports expensive matching checks as an N+1 risk' do
+    finding = Enforceable::Runner::Finding.new(
+      policy_class: WidgetPolicy,
+      rule: :show?,
+      scope: :visible,
+      actor_name: :reader,
+      subject_name: :widget,
+      record: Widget.new(id: 1),
+      record_id: 1,
+      allowed: true,
+      included: true,
+      queries: 3
+    )
+    report = Enforceable::Report.new([finding], query_warning_threshold: 3)
+    expect(report.to_s).to include('N+1 RISK', 'threshold: 3 SQL/check')
+  end
+
   it 'records policy exceptions instead of crashing' do
     binding = Enforceable::Binding.custom(
       rules: ->(_) { [:show?] },
