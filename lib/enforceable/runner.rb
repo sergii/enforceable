@@ -8,7 +8,7 @@ module Enforceable
   class Runner
     class ScopeTypeError < StandardError
     end
-    Finding = Struct.new(:policy_class, :rule, :scope, :actor_name, :subject_name, :actor, :record, :record_id,
+    Finding = Struct.new(:policy_class, :rule, :scope_name, :actor_name, :subject_name, :actor, :record, :record_id,
                          :allowed, :included, :error, :queries, keyword_init: true) do
       # True when a denied record is included by the scope.
       def leak? = error.nil? && !allowed && included
@@ -65,11 +65,11 @@ module Enforceable
         raise ScopeTypeError, "scope returned #{scoped.class}, expected ActiveRecord::Relation" unless scoped.is_a?(::ActiveRecord::Relation)
 
         included = scoped.where(id: record.id).exists?
-        return Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope_name,
+        return Finding.new(policy_class: policy, rule: declaration.rule, scope_name: declaration.scope_name,
                            actor_name: actor_name, subject_name: subject_name, actor: actor, record: record, record_id: record.id, allowed: !!allowed, included: included, queries: query_count)
       end
     rescue StandardError => e
-      Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope_name, actor_name: actor_name,
+      Finding.new(policy_class: policy, rule: declaration.rule, scope_name: declaration.scope_name, actor_name: actor_name,
                   subject_name: subject_name, actor: actor, record: record, record_id: record.id, error: e, queries: query_count)
     end
 

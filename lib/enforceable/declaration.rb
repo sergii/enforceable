@@ -19,14 +19,19 @@ module Enforceable
 
     # Returns declarations inherited from parent policies.
     def enforceable_declarations
+      own = @enforceable_declarations ||= []
+      own_acknowledgements = @enforceable_acknowledgements ||= []
       inherited = superclass.respond_to?(:enforceable_declarations) ? superclass.enforceable_declarations : []
-      inherited + (@enforceable_declarations ||= [])
+      overridden_rules = own.map(&:rule) + own_acknowledgements.map(&:rule)
+      inherited.reject { |declaration| overridden_rules.include?(declaration.rule) } + own
     end
 
     # Returns acknowledged exclusions inherited from parent policies.
     def enforceable_acknowledgements
+      own = @enforceable_acknowledgements ||= []
       inherited = superclass.respond_to?(:enforceable_acknowledgements) ? superclass.enforceable_acknowledgements : []
-      inherited + (@enforceable_acknowledgements ||= [])
+      overridden_rules = own.map(&:rule) + (@enforceable_declarations || []).map(&:rule)
+      inherited.reject { |acknowledgement| overridden_rules.include?(acknowledgement.rule) } + own
     end
   end
 end

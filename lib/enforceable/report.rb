@@ -132,14 +132,26 @@ module Enforceable
     end
 
     def finding_hash(finding)
-      { policy: finding.policy_class.name, rule: finding.rule, scope: finding.scope, actor: finding.actor_name, subject: finding.subject_name,
-        rule_allowed: finding.allowed, scope_included: finding.included, direction: if finding.leak?
-                                                                                      'leak'
-                                                                                    elsif finding.narrow?
-                                                                                      'narrow_scope'
-                                                                                    else
-                                                                                      finding.error? ? 'error' : 'match'
-                                                                                    end, error: finding.error&.message, queries: finding.queries }
+      {
+        policy: finding.policy_class.name,
+        rule: finding.rule,
+        scope_name: finding.scope_name,
+        actor: finding.actor_name,
+        subject: finding.subject_name,
+        rule_allowed: finding.allowed,
+        scope_included: finding.included,
+        direction: direction(finding),
+        error: finding.error&.message,
+        queries: finding.queries
+      }
+    end
+
+    def direction(finding)
+      return 'leak' if finding.leak?
+      return 'narrow_scope' if finding.narrow?
+      return 'error' if finding.error?
+
+      'match'
     end
   end
 end

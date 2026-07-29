@@ -78,7 +78,7 @@ RSpec.describe Enforceable do
     finding = Enforceable::Runner::Finding.new(
       policy_class: WidgetPolicy,
       rule: :show?,
-      scope: :visible,
+      scope_name: :visible,
       actor_name: :reader,
       subject_name: :widget,
       record: Widget.new(id: 1),
@@ -95,7 +95,7 @@ RSpec.describe Enforceable do
     finding = Enforceable::Runner::Finding.new(
       policy_class: WidgetPolicy,
       rule: :show?,
-      scope: :visible,
+      scope_name: :visible,
       actor_name: :reader,
       subject_name: :widget,
       record: Widget.new(id: 1),
@@ -116,7 +116,12 @@ RSpec.describe Enforceable do
     end
     report = Enforceable::Runner.new(binding: Enforceable::Binding::Pundit.new, world: world,
                                      policies: [policy]).run
-    expect(report.to_s).to include('UnsupportedScopeName', 'cannot honor scope_name: :published')
+    aggregate_failures 'overridden scope declaration' do
+      expect(policy.enforceable_declarations.map(&:scope_name)).to eq([:published])
+      expect(report.findings.size).to eq(1)
+      expect(report.to_s).to include('UnsupportedScopeName', 'cannot honor scope_name: :published')
+      expect(report.to_h[:findings].first).to include(scope_name: :published)
+    end
   end
 
   it 'records policy exceptions instead of crashing' do
