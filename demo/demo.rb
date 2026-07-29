@@ -44,7 +44,7 @@ if defined?(ActionPolicy)
   class ActionApplicationPolicy < ActionPolicy::Base
     include Enforceable
 
-    enforceable :show?, scope: :default
+    enforceable :show?, scope_name: :default
 
     def show?
       return false if record.requisition.confidential? && !user.on_hiring_committee?(record.requisition)
@@ -74,7 +74,7 @@ end
 class ApplicationPolicy
   include Enforceable
 
-  enforceable :show?, scope: :relation_scope
+  enforceable :show?, scope_name: :default
 
   def initialize(user, record)
     (@user = user

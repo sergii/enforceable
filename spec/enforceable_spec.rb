@@ -7,7 +7,7 @@ require 'action_policy/rails/scope_matchers/active_record'
 class WidgetPolicy
   include Enforceable
 
-  enforceable :show?, scope: :visible
+  enforceable :show?, scope_name: :default
   not_enforceable :export?, reason: 'MFA is session state'
 
   def initialize(user, record)
@@ -30,7 +30,7 @@ end
 class ActionWidgetPolicy < ActionPolicy::Base
   include Enforceable
 
-  enforceable :show?, scope: :default
+  enforceable :show?, scope_name: :default
 
   def show?
     record.visible?
@@ -104,7 +104,19 @@ RSpec.describe Enforceable do
       included: true,
       queries: 0
     )
-    expect(Enforceable::Report.new([finding]).to_s).to eq('Enforceable: 1 pairs across 1 policies — no divergences.')
+    expect(Enforceable::Report.new([finding]).to_s).to eq('Enforceable: 1 pair across 1 policy — no divergences.')
+  end
+
+  it 'reports an unsupported Pundit scope name as an error' do
+    policy = Class.new(WidgetPolicy)
+    policy.enforceable :show?, scope_name: :published
+    world = Enforceable::World.define(:unsupported_pundit_scope) do
+      actor(:member) { { admin: true } }
+      subject(:widget) { Widget.create!(name: 'visible', visible: true) }
+    end
+    report = Enforceable::Runner.new(binding: Enforceable::Binding::Pundit.new, world: world,
+                                     policies: [policy]).run
+    expect(report.to_s).to include('UnsupportedScopeName', 'cannot honor scope_name: :published')
   end
 
   it 'records policy exceptions instead of crashing' do

@@ -61,15 +61,15 @@ module Enforceable
       count_queries do
         allowed = binding.check(actor, declaration.rule, record, policy_class: policy)
         scoped = binding.scope(actor, declaration.rule, record.class.all, policy_class: policy,
-                                                                          scope_name: declaration.scope, **declaration.scope_options)
+                                                                          scope_name: declaration.scope_name, **declaration.scope_options)
         raise ScopeTypeError, "scope returned #{scoped.class}, expected ActiveRecord::Relation" unless scoped.is_a?(::ActiveRecord::Relation)
 
         included = scoped.where(id: record.id).exists?
-        return Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope,
+        return Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope_name,
                            actor_name: actor_name, subject_name: subject_name, actor: actor, record: record, record_id: record.id, allowed: !!allowed, included: included, queries: query_count)
       end
     rescue StandardError => e
-      Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope, actor_name: actor_name,
+      Finding.new(policy_class: policy, rule: declaration.rule, scope: declaration.scope_name, actor_name: actor_name,
                   subject_name: subject_name, actor: actor, record: record, record_id: record.id, error: e, queries: query_count)
     end
 

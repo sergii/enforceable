@@ -3,6 +3,8 @@
 module Enforceable
   # Adapts Enforceable to an authorization library without changing semantics.
   class Binding
+    # Raised when a binding cannot apply a requested named scope.
+    class UnsupportedScopeName < StandardError; end
     # Returns declared authorization rule names for a policy.
     def rules_for(_policy_class) = raise NotImplementedError
 
@@ -40,7 +42,9 @@ module Enforceable
       def rules_for(policy_class) = policy_class.enforceable_declarations.map(&:rule)
       def check(actor, rule, record, policy_class: nil) = policy_class.new(actor, record).public_send(rule)
 
-      def scope(actor, _rule, relation, policy_class: nil, **_opts)
+      def scope(actor, _rule, relation, policy_class: nil, scope_name: nil, **_opts)
+        raise UnsupportedScopeName, "Pundit exposes one Scope per policy; cannot honor scope_name: #{scope_name.inspect}" if scope_name && scope_name != :default
+
         policy_class.const_get(:Scope).new(actor, relation).resolve
       end
     end

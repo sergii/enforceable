@@ -67,8 +67,10 @@ module Enforceable
         lines << colorize(row, finding, color)
       end
       warning = query_warning_line(entries)
-      return (lines << warning).join("\n") if divergent.empty? && warning
-      return lines.join("\n") if divergent.empty?
+      if divergent.empty?
+        lines << warning if warning
+        return lines.join("\n")
+      end
 
       lines << ''
       divergent.each { |finding| lines << explanation(finding) }
@@ -98,7 +100,11 @@ module Enforceable
 
     def clean_summary
       policy_count = findings.map(&:policy_class).uniq.size
-      "Enforceable: #{findings.size} pairs across #{policy_count} policies — no divergences."
+      "Enforceable: #{pluralize(findings.size, 'pair')} across #{pluralize(policy_count, 'policy', 'policies')} — no divergences."
+    end
+
+    def pluralize(count, singular, plural = "#{singular}s")
+      "#{count} #{count == 1 ? singular : plural}"
     end
 
     def query_warning_line(entries)

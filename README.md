@@ -14,10 +14,12 @@ Add `gem "enforceable", group: :test` and require `enforceable/runner` only in t
 
 ## Three-step setup
 
-1. Include `Enforceable` in policies and declare `enforceable :show?, scope: :relation_scope`.
+1. Include `Enforceable` in policies and declare `enforceable :show?, scope_name: :default`.
 2. Define a `Enforceable::World` with actor and subject fixture blocks.
 3. Call `Enforceable::Runner.new(binding:, world:).run`, or include `Enforceable::RSpec` and use `verify_all_policies`.
 
 `not_enforceable :export?, reason: "session-only MFA state"` records a deliberate exclusion in the report.
 
 Run the demo with either adapter: `rake demo` (Pundit) or `BINDING=action_policy rake demo` (Action Policy). Both use the real framework APIs.
+
+`scope_name: :default` means the binding's default collection scope. Action Policy also supports named `relation_scope`s; Pundit has one `Scope` class per policy and rejects any non-default scope name rather than silently checking a different scope.
