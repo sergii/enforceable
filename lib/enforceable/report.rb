@@ -62,11 +62,11 @@ module Enforceable
         lines << colorize(row, finding, color)
       end
       divergent = entries.reject(&:match?)
-      append_query_warning(lines, entries)
-      return lines.join("\n") if divergent.empty?
+      return append_query_warning(lines, entries).join("\n") if divergent.empty?
 
       lines << ''
       divergent.each { |finding| lines << explanation(finding) }
+      append_query_warning(lines, entries)
       lines << ''
       lines << "  Fix the scope, fix the rule, or declare: not_enforceable :#{rule}, reason: \"...\""
       lines.join("\n")
@@ -87,13 +87,14 @@ module Enforceable
     end
 
     def append_query_warning(lines, entries)
-      return unless @query_warning_threshold
+      return lines unless @query_warning_threshold
 
       slow = entries.select { |finding| finding.queries.to_i >= @query_warning_threshold }
-      return if slow.empty?
+      return lines if slow.empty?
 
       details = slow.map { |finding| "#{finding.actor_name}/#{finding.subject_name}=#{finding.queries} SQL" }.join(', ')
       lines << "\n  N+1 RISK (threshold: #{@query_warning_threshold} SQL/check): #{details}"
+      lines
     end
 
     def colorize(text, finding, color)
