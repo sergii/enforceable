@@ -53,11 +53,12 @@ module Enforceable
       warning = query_warning_line(entries)
       return healthy_group(policy, rule, entries) if divergent.empty? && warning.nil? && !verbose
 
-      header = divergent.empty? ? "Enforceable — #{policy.name}##{rule}" : "Enforceable::Divergence — #{policy.name}##{rule}"
-      actor_width = column_width(entries, :actor_name, 5, 20)
-      subject_width = column_width(entries, :subject_name, 7, 32)
+      header = group_header(policy, rule, entries, divergent)
+      rows = verbose || divergent.empty? ? entries : divergent
+      actor_width = column_width(rows, :actor_name, 5, 20)
+      subject_width = column_width(rows, :subject_name, 7, 32)
       lines = [header, '', table_header(actor_width, subject_width)]
-      entries.each do |finding|
+      rows.each do |finding|
         rule_result = if finding.error?
                         'ERROR'
                       else
@@ -73,6 +74,7 @@ module Enforceable
                      truncate(finding.subject_name, subject_width), rule_result, scope_result, marker)
         lines << colorize(row, finding, color)
       end
+      append_hidden_match_note(lines, entries, rows, verbose)
       if divergent.empty?
         lines << warning if warning
         return lines.join("\n")
@@ -124,9 +126,22 @@ module Enforceable
       "✓ #{policy.name}##{rule} — #{entries.size}/#{entries.size} checks agree"
     end
 
+    def group_header(policy, rule, entries, divergent)
+      return "Enforceable — #{policy.name}##{rule}" if divergent.empty?
+
+      "DIVERGENCE — #{policy.name}##{rule} (#{pluralize(divergent.size, 'divergence')} across #{pluralize(entries.size, 'check')})"
+    end
+
     def table_header(actor_width, subject_width)
-      header = format("  %-#{actor_width}s  %-#{subject_width}s  %-11s %-11s", 'actor', 'subject', 'point check', 'collection')
+      header = format("  %-#{actor_width}s  %-#{subject_width}s  %-8s  %-8s", 'actor', 'subject', 'point', 'scope')
       "#{header}\n  #{'─' * (header.length - 2)}"
+    end
+
+    def append_hidden_match_note(lines, entries, rows, verbose)
+      return if verbose
+
+      hidden = entries.size - rows.size
+      lines << "  … #{pluralize(hidden, 'matching check')} hidden; set ENFORCEABLE_VERBOSE=true for the full matrix" if hidden.positive?
     end
 
     def column_width(entries, attribute, minimum, maximum)

@@ -170,15 +170,20 @@ RSpec.describe Enforceable do
       included: true,
       queries: 0
     )
-    report = Enforceable::Report.new([healthy, leak])
+    matching_action_policy = healthy.dup
+    matching_action_policy.policy_class = ActionWidgetPolicy
+    matching_action_policy.subject_name = :client_application
+    report = Enforceable::Report.new([healthy, matching_action_policy, leak])
     output = report.to_s(color: false)
 
     aggregate_failures 'triage output' do
-      expect(output).to start_with("Enforceable — 2 checks across 2 policies\nFAIL: 1 data exposure")
+      expect(output).to start_with("Enforceable — 3 checks across 2 policies\nFAIL: 1 data exposure")
       expect(output).to include('✓ WidgetPolicy#show? — 1/1 checks agree')
       expect(output).to include('Widget#019fb06f-894…')
       expect(output.index('ActionWidgetPolicy')).to be < output.index('✓ WidgetPolicy')
-      expect(report.to_s(color: false, verbose: true)).to include('point check', 'collection')
+      expect(output).not_to include('ordinary_widget')
+      expect(output).to include('… 1 matching check hidden')
+      expect(report.to_s(color: false, verbose: true)).to include('point', 'scope', 'ordinary_widget', 'client_application')
     end
   end
 
