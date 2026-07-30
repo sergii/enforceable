@@ -93,7 +93,7 @@ module Enforceable
                 end
       message = "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{display_id(finding.record_id)}) — #{details}"
       source = source_hint(finding)
-      source ? "#{message}\n    point check: #{source}" : message
+      source ? "#{message}\n    policy source: #{source}" : message
     end
 
     def clean?
@@ -127,7 +127,7 @@ module Enforceable
     end
 
     def table_header(actor_width, subject_width)
-      header = format("  %-#{actor_width}s  %-#{subject_width}s  %-8s  %-8s", 'actor', 'subject', 'point', 'scope')
+      header = format("  %-#{actor_width}s  %-#{subject_width}s  %-8s  %-8s", 'actor', 'record', 'policy', 'scope')
       "#{header}\n  #{'─' * (header.length - 2)}"
     end
 
@@ -163,7 +163,7 @@ module Enforceable
     def scope_state(finding)
       return 'error' if finding.error?
 
-      finding.included ? 'in' : 'out'
+      finding.included ? 'include' : 'exclude'
     end
 
     def source_hint(finding)
