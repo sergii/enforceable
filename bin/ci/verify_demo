@@ -16,5 +16,5 @@ if output=$(BINDING="$binding" bundle exec rake demo 2>&1); then
 fi
 
 echo "$output"
-grep -q 'DATA EXPOSURE.*recruiter / confidential_app' <<<"$output"
+grep -q 'DATA EXPOSURE.*recruiter / confidential_job_application' <<<"$output"
 test "$(grep -c 'DATA EXPOSURE' <<<"$output")" -eq 1

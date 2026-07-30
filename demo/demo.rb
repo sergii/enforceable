@@ -123,12 +123,12 @@ Enforceable::World.define(:ats) do
   actor(:recruiter) { User.create!(role: 'recruiter', workspace: Workspace.first, hiring_committee: false) }
   actor(:interviewer) { User.create!(role: 'interviewer', workspace: Workspace.first, hiring_committee: true) }
   actor(:outsider) { User.create!(role: 'outsider', workspace: Workspace.create!(name: 'other')) }
-  subject(:normal_app) do
+  subject(:normal_job_application) do
     Application.create!(workspace: Workspace.first, confidential: false,
                         requisition: Requisition.create!(workspace: Workspace.first,
                                                          department: Department.create!(workspace: Workspace.first), confidential: false))
   end
-  subject(:confidential_app) do
+  subject(:confidential_job_application) do
     Application.create!(workspace: Workspace.first, confidential: true,
                         requisition: Requisition.create!(workspace: Workspace.first,
                                                          department: Department.create!(workspace: Workspace.first), confidential: true))

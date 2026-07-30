@@ -14,12 +14,13 @@ FAIL: 1 data exposure
 
 DIVERGENCE — ApplicationPolicy#show? (1 divergence across 6 checks)
 
-  actor      record            policy       scope
-  ─────────────────────────────────────────────────────
-  recruiter  confidential_app  deny         include       ←
+  actor      record                        policy       scope
+  ─────────────────────────────────────────────────────────────────
+  recruiter  confidential_job_application  deny         include       ←
   … 5 matching checks hidden; set ENFORCEABLE_VERBOSE=true for the full matrix
 
-  DATA EXPOSURE — scope broader than rule: recruiter / confidential_app
+  DATA EXPOSURE — scope broader than rule: recruiter / confidential_job_application (Application#2) — rule denied; scope included
+    authorization source: demo/demo.rb:103
     Expected: the scope must exclude this record.
 ```
 
