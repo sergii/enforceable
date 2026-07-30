@@ -95,7 +95,10 @@ module Enforceable
                 end
       message = "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{display_id(finding.record_id)}) — #{details}"
       source = source_hint(finding)
-      source ? "#{message}\n    policy source: #{source}" : message
+      lines = [message]
+      lines << "    policy source: #{source}" if source
+      lines << '    Expected: the scope must exclude this record.' if finding.leak?
+      lines.join("\n")
     end
 
     def clean?

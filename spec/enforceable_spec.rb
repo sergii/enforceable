@@ -92,6 +92,7 @@ RSpec.describe Enforceable do
     aggregate_failures 'leak report' do
       expect(report).to be_failed
       expect(report.to_s).to include('DATA EXPOSURE')
+      expect(report.to_s).to include('Expected: the scope must exclude this record.')
       expect(report.to_s).to include('ACKNOWLEDGED')
     end
   end
@@ -181,6 +182,7 @@ RSpec.describe Enforceable do
       expect(output).to include('✓ WidgetPolicy#show? — 1/1 checks agree')
       expect(output).to include('Widget#019fb06f-894…')
       expect(output).to include('policy source: spec/enforceable_spec.rb:')
+      expect(output).to include('Expected: the scope must exclude this record.')
       expect(output).to include('deny', 'include')
       expect(output.index('ActionWidgetPolicy')).to be < output.index('✓ WidgetPolicy')
       expect(output).not_to include('ordinary_widget')
