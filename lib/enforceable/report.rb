@@ -59,16 +59,8 @@ module Enforceable
       subject_width = column_width(rows, :subject_name, 7, 32)
       lines = [header, '', table_header(actor_width, subject_width)]
       rows.each do |finding|
-        rule_result = if finding.error?
-                        'ERROR'
-                      else
-                        (finding.allowed ? '✓' : '✗')
-                      end
-        scope_result = if finding.error?
-                         'ERROR'
-                       else
-                         (finding.included ? '✓' : '✗')
-                       end
+        rule_result = point_state(finding)
+        scope_result = scope_state(finding)
         marker = finding.match? ? '' : '   ←'
         row = format("  %-#{actor_width}s  %-#{subject_width}s  %-11s %-11s%s", truncate(finding.actor_name, actor_width),
                      truncate(finding.subject_name, subject_width), rule_result, scope_result, marker)
@@ -160,6 +152,18 @@ module Enforceable
     def display_id(identifier)
       text = identifier.to_s
       text.length > 12 ? "#{text[0, 12]}…" : text
+    end
+
+    def point_state(finding)
+      return 'error' if finding.error?
+
+      finding.allowed ? 'allow' : 'deny'
+    end
+
+    def scope_state(finding)
+      return 'error' if finding.error?
+
+      finding.included ? 'in' : 'out'
     end
 
     def source_hint(finding)

@@ -181,6 +181,7 @@ RSpec.describe Enforceable do
       expect(output).to include('✓ WidgetPolicy#show? — 1/1 checks agree')
       expect(output).to include('Widget#019fb06f-894…')
       expect(output).to include('point check: spec/enforceable_spec.rb:')
+      expect(output).to include('deny', 'in')
       expect(output.index('ActionWidgetPolicy')).to be < output.index('✓ WidgetPolicy')
       expect(output).not_to include('ordinary_widget')
       expect(output).to include('… 1 matching check hidden')
