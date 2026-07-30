@@ -5,6 +5,8 @@ require 'json'
 module Enforceable
   # Formats verification findings for people and CI.
   class Report
+    STATE_COLUMN_WIDTH = 11
+
     attr_reader :findings, :acknowledgements
 
     # Creates a report from runner output.
@@ -62,8 +64,8 @@ module Enforceable
         rule_result = point_state(finding)
         scope_result = scope_state(finding)
         marker = finding.match? ? '' : '   ←'
-        row = format("  %-#{actor_width}s  %-#{subject_width}s  %-11s %-11s%s", truncate(finding.actor_name, actor_width),
-                     truncate(finding.subject_name, subject_width), rule_result, scope_result, marker)
+        row = format(table_format(actor_width, subject_width), truncate(finding.actor_name, actor_width),
+                     truncate(finding.subject_name, subject_width), rule_result, scope_result) + marker
         lines << colorize(row, finding, color)
       end
       append_hidden_match_note(lines, entries, rows, verbose)
@@ -127,8 +129,12 @@ module Enforceable
     end
 
     def table_header(actor_width, subject_width)
-      header = format("  %-#{actor_width}s  %-#{subject_width}s  %-8s  %-8s", 'actor', 'record', 'policy', 'scope')
+      header = format(table_format(actor_width, subject_width), 'actor', 'record', 'policy', 'scope')
       "#{header}\n  #{'─' * (header.length - 2)}"
+    end
+
+    def table_format(actor_width, subject_width)
+      "  %-#{actor_width}s  %-#{subject_width}s  %-#{STATE_COLUMN_WIDTH}s  %-#{STATE_COLUMN_WIDTH}s"
     end
 
     def append_hidden_match_note(lines, entries, rows, verbose)
