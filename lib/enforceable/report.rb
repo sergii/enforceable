@@ -99,7 +99,9 @@ module Enforceable
                 else
                   "rule #{finding.allowed ? 'allowed' : 'denied'}; scope #{finding.included ? 'included' : 'excluded'}"
                 end
-      "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{display_id(finding.record_id)}) — #{details}"
+      message = "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{display_id(finding.record_id)}) — #{details}"
+      source = source_hint(finding)
+      source ? "#{message}\n    point check: #{source}" : message
     end
 
     def clean?
@@ -158,6 +160,17 @@ module Enforceable
     def display_id(identifier)
       text = identifier.to_s
       text.length > 12 ? "#{text[0, 12]}…" : text
+    end
+
+    def source_hint(finding)
+      location = finding.policy_class.instance_method(finding.rule).source_location
+      return unless location
+
+      path, line = location
+      path = path.delete_prefix("#{Dir.pwd}/") if path.start_with?("#{Dir.pwd}/")
+      "#{path}:#{line}"
+    rescue NameError
+      nil
     end
 
     def pluralize(count, singular, plural = "#{singular}s")

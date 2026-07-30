@@ -2,7 +2,7 @@
 
 namespace :enforceable do
   desc 'Verify declared authorization policies against collection scopes'
-  task verify: :environment do
+  task :verify, [:mode] => :environment do |_task, args|
     Enforceable.runner!
     Rails.application.eager_load!
 
@@ -19,9 +19,14 @@ namespace :enforceable do
     ).run
     puts report.to_s(
       format: ENV.fetch('ENFORCEABLE_FORMAT', 'text'),
-      verbose: ENV.fetch('ENFORCEABLE_VERBOSE', 'false') == 'true'
+      verbose: args[:mode] == 'full' || ENV.fetch('ENFORCEABLE_VERBOSE', 'false') == 'true'
     )
     abort 'Enforceable verification failed' if report.failed?
+  end
+
+  desc 'Verify policies and print every actor/subject check'
+  task full: :environment do
+    Rake::Task['enforceable:verify'].invoke('full')
   end
 
   def default_binding
