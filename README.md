@@ -1,12 +1,34 @@
 # enforceable
 
+> **enforceable** _(adjective)_ — “able to be imposed so that it must be complied with.”
+>
+> — Oxford Languages
+
 Authorization bugs often hide in the gap between a policy’s point check and its collection scope. `enforceable` runs both for every actor/record fixture pair and reports disagreement—especially the dangerous case where a scope includes a record that the rule denies.
+
+Built for Rails applications using **Pundit**, **Action Policy**, or **CanCanCan**.
 
 ```ruby
 Enforceable::Divergence — ApplicationPolicy#show?
   recruiter      confidential_app    ✗      ✓   ←
   DATA EXPOSURE — scope broader than rule: recruiter / confidential_app
 ```
+
+## Use cases
+
+- Catch an index or search scope that exposes a record whose individual `show?` / `:read` check denies access.
+- Protect tenant boundaries by testing users and records from multiple workspaces or accounts together.
+- Prevent regressions when a role, ownership rule, feature flag, or organization-membership condition changes.
+- Make authorization verification a repeatable CI or pre-commit quality gate instead of relying on a handful of request specs.
+- Document intentional exceptions with `not_enforceable`, so known non-queryable rules are visible rather than silently skipped.
+
+## Supported authorization libraries
+
+| Library | Point check | Collection scope |
+| --- | --- | --- |
+| [Pundit](https://github.com/varvet/pundit) | `Policy#show?` | `Policy::Scope#resolve` |
+| [Action Policy](https://actionpolicy.evilmartians.io/) | `Policy#apply` | `relation_scope` |
+| [CanCanCan](https://github.com/CanCanCommunity/cancancan) | `Ability#can?` | `Relation#accessible_by` |
 
 ## Install
 
