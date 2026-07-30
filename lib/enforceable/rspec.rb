@@ -8,7 +8,10 @@ module Enforceable
   module RSpec
     # Defines verification examples for all opted-in policies.
     def verify_all_policies(world:, binding: Binding::Pundit.new, warn_on_narrow_scope: true)
-      Enforceable.policies.each do |policy|
+      policies = Enforceable.policies
+      raise Runner::EmptyPolicySet, 'no policies to verify — eager load policies before calling verify_all_policies' if policies.empty?
+
+      policies.each do |policy|
         it "keeps #{policy.name} point checks and scopes consistent" do
           report = Runner.new(binding: binding, world: world, warn_on_narrow_scope: warn_on_narrow_scope,
                               policies: [policy]).run

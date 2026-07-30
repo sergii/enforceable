@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'enforceable/rspec'
 require 'action_policy'
 require 'action_policy/rails/scope_matchers/active_record'
 
@@ -51,6 +52,15 @@ RSpec.describe Enforceable do
       policies: []
     )
     expect { runner.run }.to raise_error(Enforceable::Runner::EmptyPolicySet, /no policies to verify/)
+  end
+
+  it 'fails RSpec setup when no policies have been loaded' do
+    Enforceable.reset!
+    host = Object.new.extend(Enforceable::RSpec)
+    expect { host.verify_all_policies(world: :unused) }.to raise_error(Enforceable::Runner::EmptyPolicySet, /eager load policies/)
+  ensure
+    Enforceable.policies << WidgetPolicy
+    Enforceable.policies << ActionWidgetPolicy
   end
 
   it 'fails when a selected policy has no declarations' do
