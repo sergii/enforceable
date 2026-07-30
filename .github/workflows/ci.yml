@@ -22,3 +22,5 @@ jobs:
         run: bash bin/ci/verify_demo pundit
       - name: Demo detects the seeded leak (Action Policy)
         run: bash bin/ci/verify_demo action_policy
+      - name: Demo verifies a real CanCanCan ability
+        run: bash bin/ci/verify_demo cancancan

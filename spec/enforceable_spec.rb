@@ -4,6 +4,7 @@ require 'spec_helper'
 require 'enforceable/rspec'
 require 'action_policy'
 require 'action_policy/rails/scope_matchers/active_record'
+require 'cancan'
 
 class WidgetPolicy
   include Enforceable
@@ -39,6 +40,22 @@ class ActionWidgetPolicy < ActionPolicy::Base
 
   relation_scope do |relation|
     relation.where(visible: true)
+  end
+end
+
+class CanCanWidget < ActiveRecord::Base
+  self.table_name = 'widgets'
+
+  include Enforceable
+
+  enforceable :read, scope_name: :default
+end
+
+class WidgetAbility
+  include CanCan::Ability
+
+  def initialize(_user)
+    can :read, CanCanWidget, visible: true
   end
 end
 
@@ -181,7 +198,7 @@ RSpec.describe Enforceable do
       expect(output).to start_with("Enforceable — 3 checks across 2 policies\nFAIL: 1 data exposure")
       expect(output).to include('✓ WidgetPolicy#show? — 1/1 checks agree')
       expect(output).to include('Widget#019fb06f-894…')
-      expect(output).to include('policy source: spec/enforceable_spec.rb:')
+      expect(output).to include('authorization source: spec/enforceable_spec.rb:')
       expect(output).to include('Expected: the scope must exclude this record.')
       expect(output).to include('deny', 'include')
       expect(output.index('ActionWidgetPolicy')).to be < output.index('✓ WidgetPolicy')
@@ -255,5 +272,32 @@ RSpec.describe Enforceable do
     report = Enforceable::Runner.new(binding: Enforceable::Binding::ActionPolicy.new, world: world,
                                      policies: [ActionWidgetPolicy]).run
     expect(report).not_to be_failed, report.to_s
+  end
+
+  it 'uses CanCanCan to apply an ability and Active Record accessible_by scope' do
+    visible = CanCanWidget.create!(name: 'visible', visible: true)
+    hidden = CanCanWidget.create!(name: 'hidden', visible: false)
+    world = Enforceable::World.define(:cancan_widgets) do
+      actor(:reader) { Object.new }
+      subject(:visible) { visible }
+      subject(:hidden) { hidden }
+    end
+    binding = Enforceable::Binding::CanCanCan.new(ability: WidgetAbility)
+    report = Enforceable::Runner.new(binding: binding, world: world, policies: [CanCanWidget]).run
+
+    expect(report).not_to be_failed, report.to_s
+  end
+
+  it 'reports an unsupported CanCanCan scope name as an error' do
+    resource = Class.new(CanCanWidget)
+    resource.enforceable :read, scope_name: :published
+    world = Enforceable::World.define(:unsupported_cancancan_scope) do
+      actor(:reader) { Object.new }
+      subject(:visible) { CanCanWidget.create!(name: 'visible', visible: true) }
+    end
+    report = Enforceable::Runner.new(binding: Enforceable::Binding::CanCanCan.new(ability: WidgetAbility), world: world,
+                                     policies: [resource]).run
+
+    expect(report.to_s).to include('UnsupportedScopeName', 'cannot honor scope_name: :published')
   end
 end

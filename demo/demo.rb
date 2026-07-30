@@ -4,10 +4,14 @@ require 'active_record'
 require 'enforceable'
 Enforceable.runner!
 
-if ENV.fetch('BINDING', 'pundit') == 'action_policy'
+binding_name = ENV.fetch('BINDING', 'pundit')
+
+if binding_name == 'action_policy'
   require 'action_policy'
   require 'action_policy/rails/scope_matchers/active_record'
 end
+
+require 'cancan' if binding_name == 'cancancan'
 
 ActiveRecord::Base.establish_connection(adapter: 'sqlite3', database: ':memory:')
 ActiveRecord::Schema.define do
@@ -29,6 +33,7 @@ ActiveRecord::Schema.define do
   create_table(:applications) do |t|
     t.references :requisition
     t.references :workspace
+    t.boolean :confidential, default: false
   end
 end
 
@@ -69,6 +74,20 @@ end
 class Application < ActiveRecord::Base
   belongs_to :workspace
   belongs_to :requisition
+
+  include Enforceable if defined?(CanCan)
+  enforceable :read, scope_name: :default if defined?(CanCan)
+end
+
+if defined?(CanCan)
+  class Ability
+    include CanCan::Ability
+
+    def initialize(user)
+      can :read, Application, workspace_id: user.workspace_id
+      cannot :read, Application, confidential: true unless user.hiring_committee?
+    end
+  end
 end
 
 class ApplicationPolicy
@@ -105,20 +124,27 @@ Enforceable::World.define(:ats) do
   actor(:interviewer) { User.create!(role: 'interviewer', workspace: Workspace.first, hiring_committee: true) }
   actor(:outsider) { User.create!(role: 'outsider', workspace: Workspace.create!(name: 'other')) }
   subject(:normal_app) do
-    Application.create!(workspace: Workspace.first,
+    Application.create!(workspace: Workspace.first, confidential: false,
                         requisition: Requisition.create!(workspace: Workspace.first,
                                                          department: Department.create!(workspace: Workspace.first), confidential: false))
   end
   subject(:confidential_app) do
-    Application.create!(workspace: Workspace.first,
+    Application.create!(workspace: Workspace.first, confidential: true,
                         requisition: Requisition.create!(workspace: Workspace.first,
                                                          department: Department.create!(workspace: Workspace.first), confidential: true))
   end
 end
 
-action_policy = ENV.fetch('BINDING', 'pundit') == 'action_policy'
-binding = action_policy ? Enforceable::Binding::ActionPolicy.new : Enforceable::Binding::Pundit.new
-policies = action_policy ? [ActionApplicationPolicy] : [ApplicationPolicy]
+binding, policies = case binding_name
+                    when 'pundit'
+                      [Enforceable::Binding::Pundit.new, [ApplicationPolicy]]
+                    when 'action_policy'
+                      [Enforceable::Binding::ActionPolicy.new, [ActionApplicationPolicy]]
+                    when 'cancancan'
+                      [Enforceable::Binding::CanCanCan.new(ability: Ability), [Application]]
+                    else
+                      raise "Unknown BINDING: #{binding_name}"
+                    end
 report = Enforceable::Runner.new(binding: binding, world: :ats, policies: policies).run
 puts report.to_s(format: ENV.fetch('FORMAT', 'text'))
 abort 'Demo intentionally fails: the scope leaks confidential applications' if report.failed?

@@ -21,6 +21,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = '>= 3.2'
   spec.add_development_dependency 'action_policy', '>= 0.7'
   spec.add_development_dependency 'activerecord', '>= 7.0'
+  spec.add_development_dependency 'cancancan', '>= 3.5'
   spec.add_development_dependency 'pundit', '>= 2.3'
   spec.add_development_dependency 'railties', '>= 7.0'
   spec.add_development_dependency 'rake', '>= 13.0'

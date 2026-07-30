@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-binding="${1:?pass pundit or action_policy}"
+binding="${1:?pass pundit, action_policy, or cancancan}"
+
+if [[ "$binding" == "cancancan" ]]; then
+  output=$(BINDING="$binding" bundle exec rake demo 2>&1)
+  echo "$output"
+  grep -q 'no divergences' <<<"$output"
+  exit 0
+fi
 
 if output=$(BINDING="$binding" bundle exec rake demo 2>&1); then
   echo "Demo unexpectedly passed"

@@ -33,6 +33,7 @@ namespace :enforceable do
     case ENV.fetch('ENFORCEABLE_BINDING', 'pundit')
     when 'pundit' then Enforceable::Binding::Pundit.new
     when 'action_policy' then Enforceable::Binding::ActionPolicy.new
+    when 'cancancan' then Enforceable::Binding::CanCanCan.new(ability: ->(actor) { Ability.new(actor) })
     else raise "Unknown ENFORCEABLE_BINDING: #{ENV.fetch('ENFORCEABLE_BINDING', nil)}"
     end
   end

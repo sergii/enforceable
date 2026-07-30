@@ -96,7 +96,7 @@ module Enforceable
       message = "  #{label}: #{finding.actor_name} / #{finding.subject_name} (#{finding.record.class}##{display_id(finding.record_id)}) — #{details}"
       source = source_hint(finding)
       lines = [message]
-      lines << "    policy source: #{source}" if source
+      lines << "    authorization source: #{source}" if source
       lines << '    Expected: the scope must exclude this record.' if finding.leak?
       lines.join("\n")
     end
@@ -177,13 +177,21 @@ module Enforceable
 
     def source_hint(finding)
       location = finding.policy_class.instance_method(finding.rule).source_location
+      format_source_location(location)
+    rescue NameError
+      format_source_location(finding.declaration_source)
+    end
+
+    def format_source_location(location)
       return unless location
 
-      path, line = location
+      path, line = if location.respond_to?(:path)
+                     [location.path, location.lineno]
+                   else
+                     location
+                   end
       path = path.delete_prefix("#{Dir.pwd}/") if path.start_with?("#{Dir.pwd}/")
       "#{path}:#{line}"
-    rescue NameError
-      nil
     end
 
     def pluralize(count, singular, plural = "#{singular}s")

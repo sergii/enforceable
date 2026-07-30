@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Enforceable
-  Declaration = Struct.new(:rule, :scope_name, :scope_options, keyword_init: true)
+  Declaration = Struct.new(:rule, :scope_name, :scope_options, :source_location, keyword_init: true)
   Acknowledgement = Struct.new(:rule, :reason, keyword_init: true)
   class DuplicateDeclarationError < StandardError
   end
@@ -12,8 +12,12 @@ module Enforceable
     def enforceable(rule, scope_name:, scope_options: {})
       rule = rule.to_sym
       ensure_rule_is_undeclared!(rule)
-      (@enforceable_declarations ||= []) << Enforceable::Declaration.new(rule: rule, scope_name: scope_name.to_sym,
-                                                                         scope_options: scope_options)
+      (@enforceable_declarations ||= []) << Enforceable::Declaration.new(
+        rule: rule,
+        scope_name: scope_name.to_sym,
+        scope_options: scope_options,
+        source_location: caller_locations(1, 1).first
+      )
     end
 
     # Records an explicitly excluded rule and its reason.

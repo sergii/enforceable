@@ -67,5 +67,34 @@ module Enforceable
         )
       end
     end
+
+    # Adapter for CanCanCan abilities and Active Record scopes.
+    class CanCanCan < Binding
+      def initialize(ability:)
+        super()
+        @ability = ability
+      end
+
+      def rules_for(resource_class) = resource_class.enforceable_declarations.map(&:rule)
+
+      # RuboCop mistakes a wrapper around CanCanCan's predicate for a predicate method.
+      # rubocop:disable Naming/PredicateMethod
+      def check(actor, rule, record, **)
+        ability_for(actor).can?(rule, record)
+      end
+      # rubocop:enable Naming/PredicateMethod
+
+      def scope(actor, rule, relation, scope_name: nil, **)
+        raise UnsupportedScopeName, "CanCanCan exposes one accessible_by scope; cannot honor scope_name: #{scope_name.inspect}" if scope_name && scope_name != :default
+
+        relation.accessible_by(ability_for(actor), rule)
+      end
+
+      private
+
+      def ability_for(actor)
+        @ability.respond_to?(:call) ? @ability.call(actor) : @ability.new(actor)
+      end
+    end
   end
 end

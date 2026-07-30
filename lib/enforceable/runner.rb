@@ -15,6 +15,7 @@ module Enforceable
     class ScopeTypeError < StandardError
     end
     Finding = Struct.new(:policy_class, :rule, :scope_name, :actor_name, :subject_name, :actor, :record, :record_id,
+                         :declaration_source,
                          :allowed, :included, :error, :queries, keyword_init: true) do
       # True when a denied record is included by the scope.
       def leak? = error.nil? && !allowed && included
@@ -75,11 +76,13 @@ module Enforceable
 
         included = scoped.where(id: record.id).exists?
         return Finding.new(policy_class: policy, rule: declaration.rule, scope_name: declaration.scope_name,
-                           actor_name: actor_name, subject_name: subject_name, actor: actor, record: record, record_id: record.id, allowed: !!allowed, included: included, queries: query_count)
+                           actor_name: actor_name, subject_name: subject_name, actor: actor, record: record, record_id: record.id,
+                           declaration_source: declaration.source_location, allowed: !!allowed, included: included, queries: query_count)
       end
     rescue StandardError => e
       Finding.new(policy_class: policy, rule: declaration.rule, scope_name: declaration.scope_name, actor_name: actor_name,
-                  subject_name: subject_name, actor: actor, record: record, record_id: record.id, error: e, queries: query_count)
+                  subject_name: subject_name, actor: actor, record: record, record_id: record.id,
+                  declaration_source: declaration.source_location, error: e, queries: query_count)
     end
 
     def ensure_active_record!
