@@ -17,11 +17,12 @@ Gem::Specification.new do |spec|
     'source_code_uri' => 'https://github.com/sergii/enforceable',
     'rubygems_mfa_required' => 'true'
   }
-  spec.files = Dir['lib/**/*.rb', 'README.md', 'Rakefile', 'LICENSE.txt', 'CHANGELOG.md']
+  spec.files = Dir['lib/**/*', 'README.md', 'Rakefile', 'LICENSE.txt', 'CHANGELOG.md']
   spec.required_ruby_version = '>= 3.2'
   spec.add_development_dependency 'action_policy', '>= 0.7'
   spec.add_development_dependency 'activerecord', '>= 7.0'
   spec.add_development_dependency 'pundit', '>= 2.3'
+  spec.add_development_dependency 'railties', '>= 7.0'
   spec.add_development_dependency 'rake', '>= 13.0'
   spec.add_development_dependency 'rspec', '>= 3.13'
   spec.add_development_dependency 'rubocop', '>= 1.60'

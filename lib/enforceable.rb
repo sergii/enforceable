@@ -17,6 +17,16 @@ module Enforceable
     @policies ||= []
   end
 
+  # Configures the Rails verification task.
+  def self.configure
+    yield configuration
+  end
+
+  # Returns task configuration without loading test-only dependencies.
+  def self.configuration
+    @configuration ||= Configuration.new
+  end
+
   # Clears global registrations, primarily for isolated test suites.
   def self.reset!
     @policies = []
@@ -28,4 +38,16 @@ module Enforceable
     require_relative 'enforceable/runner'
     require_relative 'enforceable/report'
   end
+
+  # Holds optional configuration for framework integrations.
+  class Configuration
+    attr_accessor :world, :binding, :warn_on_narrow_scope, :query_warning_threshold
+
+    def initialize
+      @warn_on_narrow_scope = true
+      @query_warning_threshold = 3
+    end
+  end
 end
+
+require_relative 'enforceable/railtie' if defined?(Rails::Railtie)

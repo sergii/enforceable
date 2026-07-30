@@ -23,3 +23,7 @@ Add `gem "enforceable", group: :test` and require `enforceable/runner` only in t
 Run the demo with either adapter: `rake demo` (Pundit) or `BINDING=action_policy rake demo` (Action Policy). Both use the real framework APIs.
 
 `scope_name: :default` means the binding's default collection scope. Action Policy also supports named `relation_scope`s; Pundit has one `Scope` class per policy and rejects any non-default scope name rather than silently checking a different scope.
+
+## Rails task
+
+Configure the fixture world and binding in an initializer, then run `bin/rails enforceable:verify` with `RAILS_ENV=test`. The task eager-loads policies, prints the report, and exits non-zero for leaks or errors.
