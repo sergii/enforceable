@@ -8,10 +8,19 @@ Authorization bugs often hide in the gap between a policy’s point check and it
 
 Built for Rails applications using **Pundit**, **Action Policy**, or **CanCanCan**.
 
-```ruby
-Enforceable::Divergence — ApplicationPolicy#show?
-  recruiter      confidential_app    ✗      ✓   ←
+```text
+Enforceable — 6 checks across 1 policy
+FAIL: 1 data exposure
+
+DIVERGENCE — ApplicationPolicy#show? (1 divergence across 6 checks)
+
+  actor      record            policy       scope
+  ─────────────────────────────────────────────────────
+  recruiter  confidential_app  deny         include       ←
+  … 5 matching checks hidden; set ENFORCEABLE_VERBOSE=true for the full matrix
+
   DATA EXPOSURE — scope broader than rule: recruiter / confidential_app
+    Expected: the scope must exclude this record.
 ```
 
 ## Use cases
