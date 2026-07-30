@@ -27,3 +27,5 @@ Run the demo with either adapter: `rake demo` (Pundit) or `BINDING=action_policy
 ## Rails task
 
 Configure the fixture world and binding in an initializer, then run `bin/rails enforceable:verify` with `RAILS_ENV=test`. The task eager-loads policies, prints the report, and exits non-zero for leaks or errors.
+
+Set `ENFORCEABLE_VERBOSE=true` to print every actor/subject row, including healthy policies. The default output collapses healthy policies so divergences are easier to triage.

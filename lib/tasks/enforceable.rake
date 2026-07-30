@@ -17,7 +17,10 @@ namespace :enforceable do
       warn_on_narrow_scope: config.warn_on_narrow_scope,
       query_warning_threshold: config.query_warning_threshold
     ).run
-    puts report.to_s(format: ENV.fetch('ENFORCEABLE_FORMAT', 'text'))
+    puts report.to_s(
+      format: ENV.fetch('ENFORCEABLE_FORMAT', 'text'),
+      verbose: ENV.fetch('ENFORCEABLE_VERBOSE', 'false') == 'true'
+    )
     abort 'Enforceable verification failed' if report.failed?
   end
 

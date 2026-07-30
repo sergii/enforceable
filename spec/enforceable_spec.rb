@@ -145,6 +145,43 @@ RSpec.describe Enforceable do
     expect(Enforceable::Report.new([finding]).to_s).to eq('Enforceable: 1 pair across 1 policy — no divergences.')
   end
 
+  it 'prioritizes divergences and collapses healthy policy groups' do
+    healthy = Enforceable::Runner::Finding.new(
+      policy_class: WidgetPolicy,
+      rule: :show?,
+      scope_name: :default,
+      actor_name: :reader,
+      subject_name: :ordinary_widget,
+      record: Widget.new(id: 1),
+      record_id: 1,
+      allowed: true,
+      included: true,
+      queries: 0
+    )
+    leak = Enforceable::Runner::Finding.new(
+      policy_class: ActionWidgetPolicy,
+      rule: :show?,
+      scope_name: :default,
+      actor_name: :client_user,
+      subject_name: :other_client_application,
+      record: Widget.new(id: '019fb06f-8940-7b62-b8bd-76b51f1f1239'),
+      record_id: '019fb06f-8940-7b62-b8bd-76b51f1f1239',
+      allowed: false,
+      included: true,
+      queries: 0
+    )
+    report = Enforceable::Report.new([healthy, leak])
+    output = report.to_s(color: false)
+
+    aggregate_failures 'triage output' do
+      expect(output).to start_with("Enforceable — 2 checks across 2 policies\nFAIL: 1 data exposure")
+      expect(output).to include('✓ WidgetPolicy#show? — 1/1 checks agree')
+      expect(output).to include('Widget#019fb06f-894…')
+      expect(output.index('ActionWidgetPolicy')).to be < output.index('✓ WidgetPolicy')
+      expect(report.to_s(color: false, verbose: true)).to include('point check', 'collection')
+    end
+  end
+
   it 'reports an unsupported Pundit scope name as an error' do
     policy = Class.new(WidgetPolicy)
     policy.enforceable :show?, scope_name: :published
